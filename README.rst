@@ -14,10 +14,13 @@ smartphones or tablets.
 Features include:
 
 * Command-line and Gtk 3 gamemaster consoles.
+
 * Quick input using miniature command-line interpreter.
+
 * All GM commands can be scripted ahead of time for quick combat setup.
-* Embedded web server provides players with health and initiative information
-  for their characters while maintaining surprise about non-player characters.
+
+* Embedded web server provides players with health and initiative information for their characters while maintaining surprise about non-player characters.
+  
 * Designed to require only minimal dependencies for easy installation.
 
 Installation
@@ -71,7 +74,7 @@ where *cmd* is the name of the command.
 Commands
 --------
 
-`add` *id* *name* *spd* *dex* *stun* *body* *end*
+``add`` *id* *name* *spd* *dex* *stun* *body* *end*
   Adds a new combatant, named *name*, to the current combat. The new combatant
   will be referred to by the ID given by *id* in any context where the GM
   selects a particular combatant.
@@ -79,50 +82,50 @@ Commands
   The combatant will have SPD *spd* and DEX *dex*, and will have maximum
   characteristic values given by *stun*, *body* and *end*.
   
-`ls`
+``ls``
   Lists all combatants (useful only at the command-line).
   
-`lsseg`
+``lsseg``
   Lists all combatants moving in the current segment
   (useful only at the command-line).
   
-`next` or `n`
+``next`` or ``n``
   Advances time to the next action and shows which combatants get to move in the
   that DEX.
  
-`dmg` or `d` *id* *characteristic* *amt*
+``dmg`` or ``d`` *id* *characteristic* *amt*
   Damages the given *characteristic* of combatant *id* by *amt*. If
   *characteristic* is not given, defaults to damaging STUN.  
   
-`abort` *id*
+``abort`` *id*
   Causes the combatant given by *id* to abort their next phase.
   
-`setpc` *id* *is_pc*
+``setpc`` *id* *is_pc*
   Sets combatant *id* as being a player character if *is_pc* is True-like.
   By default, all combatants are not marked as PCs. Any PC combatant's details
   may be viewed from the embedded webserver if it is running.
   
-`setspd` *id* *newspd*
+``setspd`` *id* *newspd*
   Changes the speed of combatant *id* and sets their next action accordingly.
   
-`run` *file*
+``run`` *file*
   Loads the specified file and executes each command at the **hero_init** shell.
   Useful for describing combat scenarios ahead-of-time. (And yes, a script
   loaded in this way can call other scripts.)
 
-`server start` or `server stop`
+``server start`` or ``server stop``
   Starts or stops an embedded webserver on port 8080. This webserver does not
   implement any security, and will provide anyone with combat details on all
   player characters, but not on any non-player characters. The webserver is
   intended for use with phones or tablets, but will also work in desktop and
   laptop browsers.
 
-`lightning` *id* *descript* *dex bonus*
+``lightning`` *id* *descript* *dex bonus*
   Augments the given combatant with the Lightning Reflexes talent at a given
   DEX bonus. Note that this command is still not very robust, and may not
   perform exactly as intended yet.
   
-`exit`
+``exit``
   Closes the frontend, stopping the embedded webserver if needed.
 
 Limitations
