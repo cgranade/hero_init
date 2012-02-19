@@ -67,8 +67,8 @@ Usage
 **hero_init** is controlled via the miniature command-line interpreter provided
 with either the command-line or graphical frontends. Interactive help has not
 yet been implemented in the graphical front end, but in the command-line
-frontend, a list of commands may always be obtained by running "help". Likewise,
-documentation on a specific command can be obtained by running "help *cmd*",
+frontend, a list of commands may always be obtained by running ``help``. Likewise,
+documentation on a specific command can be obtained by running ``help cmd``,
 where *cmd* is the name of the command.
 
 Commands
