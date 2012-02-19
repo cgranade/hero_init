@@ -12,6 +12,7 @@ ahead of time, while players can view pertinent combat information on their
 smartphones or tablets.
 
 Features include:
+
 * Command-line and Gtk 3 gamemaster consoles.
 * Quick input using miniature command-line interpreter.
 * All GM commands can be scripted ahead of time for quick combat setup.
