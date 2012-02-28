@@ -33,6 +33,8 @@ import cmd
 from constants import *
 from combatant import *
 
+from util import shlexify
+
 ## CLASSES ##
 
 # TODO: command argument splitting is very poor right now.
@@ -75,38 +77,40 @@ class HeroShell(cmd.Cmd):
         sys.exit(0)
         
     do_EOF = do_exit
-        
-    def do_run(self, args):
+
+    @shlexify        
+    def do_run(self, filename):
         """
         run [file] - Runs the given file containing hero_init commands. Useful
             to setup initial combat configurations.
         """
         try:
-            with open(args) as script_file:
+            with open(filename) as script_file:
                 for line in script_file.readlines():
                     if len(line.strip()) != 0 and not line.strip().startswith("#"):
                         self.onecmd(line)
         except IOError as ioe:
             print "[ERROR] {0}".format(ioe)
         
-    def do_add(self, args):
+        
+    @shlexify
+    def do_add(self, shortname, name, spd, dex, stun, body, end):
         """
         add [id] [name] [spd] [dex] [stun] [body] [end] - Adds a new combatant to the combat.
         """
-        cmdparts = args.split(" ")
         try:
             new_combatant = Combatant(
                 combat=self.combat,
-                shortname=cmdparts[0],
-                name=cmdparts[1],
-                spd=int(cmdparts[2]),
-                dex=int(cmdparts[3]),
-                maxstun=int(cmdparts[4]),
-                maxbody=int(cmdparts[5]),
-                maxend=int(cmdparts[6])
+                shortname=shortname,
+                name=name,
+                spd=int(spd),
+                dex=int(dex),
+                maxstun=int(stun),
+                maxbody=int(body),
+                maxend=int(end)
             )
         except RuntimeError:
-            print "Name {name} is duplicated.".format(name=cmdparts[0])
+            print "ID {name} is duplicated.".format(name=shortname)
             
     def do_ls(self, args):
         """
@@ -142,80 +146,78 @@ class HeroShell(cmd.Cmd):
         
     do_n = do_next
         
-    def do_setspd(self, args):
+        
+    @shlexify
+    def do_setspd(self, shortname, newspd):
         """
         setspd [id] [newspd] - Changes the SPD of a combatant and updates
             their next turn accordingly.
         """
-        cmdparts = args.split(" ")
-        combatant = self.combat.combatants[cmdparts[0]]
-        combatant.change_speed(int(cmdparts[1]))
+        combatant = self.combat.combatants[shortname]
+        combatant.change_speed(int(spd))
         
-    def do_setpc(self, args):
+    @shlexify
+    def do_setpc(self, shortname, is_pc):
         """
         setpc [id] [is pc] - Sets whether a combatant is a PC or not.
         """
-        cmdparts = args.split(" ")
-        combatant = self.combat.combatants[cmdparts[0]]
-        combatant.pc = bool(cmdparts[1])     
+        combatant = self.combat.combatants[shortname]
+        combatant.pc = bool(is_pc)     
         
-    def do_dmg(self, args):
+    @shlexify
+    def do_dmg(self, shortname, amt, characteristic="STUN"):
         """
-        dmg [id] [characteristic] [amt] - Damages a characteristic by the
+        dmg [id] [amt] [characteristic] - Damages a characteristic by the
             given amount.
         dmg [id] [amt] - Damages STUN by the given amount.
         
         Aliases: d
         """
-        cmdparts = args.split(" ")
-        combatant = self.combat.combatants[cmdparts[0]]
-        if len(cmdparts) > 2:
-            characteristic = cmdparts[1].upper()
-            amt = int(cmdparts[2])
-        else:
-            characteristic = "STUN"
-            amt = int(cmdparts[1])
+        combatant = self.combat.combatants[shortname]
+        characteristic = characteristic.upper()
+        amt = int(amt)
             
         combatant.characteristics[characteristic].current -= amt
         
     do_d = do_dmg
         
-    def do_abort(self, args):
+    @shlexify
+    def do_abort(self, shortname):
         """
         abort [name] - Aborts the phase of a combatant.
         """
-        cmdparts = args.split(" ")
-        combatant = self.combat.combatants[cmdparts[0]]
+        combatant = self.combat.combatants[shortname]
         combatant.abort_phase()
         
-    def do_lightning(self, args):
+    @shlexify
+    def do_lightning(self, shortname, descript, dexboost):
         """
         lightning [name] [action description] [dex bonus] - Adds a Lightning
             Reflexes power to the given combatant.
         """
-        cmdparts = args.split(" ")
         lightning_reflexes(
             combat=self.combat,
-            combatant=self.combat.combatants[cmdparts[0]],
-            description=cmdparts[1],
-            dexboost=int(cmdparts[2])
+            combatant=self.combat.combatants[shortname],
+            description=descript,
+            dexboost=int(dexboost)
             )
         #print "[ERROR] Not yet implemented."
         
-    def do_server(self, args):
+    @shlexify
+    def do_server(self, mode="start"):
         """
         server start - Starts the embedded web server.
         server stop - Stops the embedded web server.
         """
         from hero_server import HeroServer
         
-        if args.strip() == "start":
+        if mode.strip() == "start":
             if self.server is None:
                 self.server = HeroServer(self.combat, self.recv_method)
                 self.server.start()
             else:
                 print "[ERROR] Server has already been started."
-        elif args.strip() == "stop":
+        elif mode.strip() == "stop":
             if self.server is not None:
                 self.server.stop()
                 self.server = None

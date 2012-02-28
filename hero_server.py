@@ -176,18 +176,21 @@ class HeroHandler(serv.BaseHTTPRequestHandler):
     def log_request(self, *args):
         pass
 
+    def handle_get_mobile_root(self):
+        self.send_response(200)
+        self.end_headers()
+        
+        self.wfile.write(PC_SELECT_PAGE_TEMPLATE.format(
+            pc_list_content = "\n".join(map(combatant_as_li,
+            self.combat.get_all_pcs()
+        ))))
+
     def do_GET(self):
         parsed_path = up.urlparse(self.path)
         
         if parsed_path.path == "/":
         
-            self.send_response(200)
-            self.end_headers()
-            
-            self.wfile.write(PC_SELECT_PAGE_TEMPLATE.format(
-                pc_list_content = "\n".join(map(combatant_as_li,
-                self.combat.get_all_pcs()
-            ))))
+            self.handle_get_mobile_root()
             
         elif parsed_path.path.startswith("/pc/"):
             
