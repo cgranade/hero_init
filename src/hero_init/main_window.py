@@ -29,7 +29,7 @@ from PySide import QtCore, QtGui
 
 import ui.main_window
 
-import shlex, cmd
+import shlex, cmd, contextlib
 from functools import wraps
 
 ## DECORATORS ##################################################################
@@ -129,6 +129,7 @@ class MainCommand(cmd.Cmd):
         "del": "del <name>",
         "next": "next",
         "run": "run <file>",
+        "chspd": "chspd <name> <new_spd>",
     }
     VALID_CMDS = USAGES.keys() # TODO: refer to Cmd class
     
@@ -158,6 +159,11 @@ class MainCommand(cmd.Cmd):
     @shlexify
     def do_next(self):
         self._model.next()
+        
+    @shlexify
+    def do_chspd(self, name, new_spd):
+        with self._model.modify_combatant(name) as combatant:
+            combatant.change_spd(int(new_spd))
 
 STATES = {
     "NONE":   0,
@@ -243,6 +249,30 @@ class Combatant(object):
         # TODO: make sure the new state is valid.
         assert idx <= 12 and idx >= 1, idx
         self._segment[idx - 1] = state # Segments are 1-based!
+        
+    def change_spd(self, newspd):
+        # FIXME: doesn't handle NOW states properly.
+        assert newspd >= 0 and newspd <= 12, newspd
+        old_spd = self.spd
+        self._spd = newspd
+        newseg = list(SPEED_CHART[newspd])
+        
+        # Go through the segments in the new and old lists,
+        # and don't allow the combatant to move unless both lists have
+        # a FUTURE. We can do this by erasing all elements of newseg
+        # that come before we find a FUTURE in the old speed chart.
+        for idx, old in enumerate(self._segment):
+            # Check see if the old SPD chart gives us this segment.
+            if old != STATES["FUTURE"]:
+                # Nope. Erase the state in the newseg, then.
+                newseg[idx] = STATES["NONE"]
+            else:
+                # Yep. We're done here.
+                break
+        
+        # If we're here, either we found one, or there were no valid
+        # segments. Either way, newseg should be accurate.
+        self._segment = newseg
 
 class SpeedChartModel(QtCore.QAbstractTableModel):
     
@@ -352,6 +382,12 @@ class SpeedChartModel(QtCore.QAbstractTableModel):
         for combatant in self._combatants:
             if combatant.name == key:
                 return combatant
+                
+    @contextlib.contextmanager
+    def modify_combatant(self, key):
+        self.beginResetModel() # ← I really shouldn't do this.
+        yield self.get_combatant(key)
+        self.endResetModel()
         
     def next(self):
         self.beginResetModel() # This is really lazy...
