@@ -38,7 +38,8 @@ STATES = {
     "NONE":   0,
     "FUTURE": 1,
     "NOW":    2,
-    "ABORT":  3
+    "ABORT":  3,
+    "PAST":  -1,
 }
 
 SPEED_CHART = (
@@ -264,7 +265,7 @@ class SpeedChartModel(QtCore.QAbstractTableModel):
     
         # Remove the current combatant's turn.
         if self._current_combatant is not None:
-            self._current_combatant[self.segment] = STATES["NONE"]
+            self._current_combatant[self.segment] = STATES["PAST"]
             
         # Find the next combatant.
         # This will be the highest DEX combatant with a turn in the FUTURE

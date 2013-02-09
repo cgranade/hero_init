@@ -25,6 +25,7 @@
 ## IMPORTS #####################################################################
 
 import sys
+import socket
 import SocketServer
 import threading
 from PySide import QtCore, QtGui
@@ -47,6 +48,24 @@ def shlexify(func):
         return func(*(head + tuple(shlex.split(tail))))
     
     return shlexed_func
+
+## FUNCTIONS ###################################################################
+
+def get_local_hostname():
+    # Try to just get the hostname from socket.
+    hostname = socket.gethostbyname(socket.gethostname())
+    
+    # This sometimes returns 127.0.0.1, so if so we need to be more hackish.
+    # See: http://stackoverflow.com/a/166589/267841
+    if hostname == "127.0.0.1":
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.connect(("8.8.8.8", 80))
+            hostname = s.getsockname()[0]
+        finally:
+            s.close()
+            
+    return hostname
 
 ## CLASSES #####################################################################
 
@@ -110,6 +129,14 @@ class MainWindow(QtGui.QMainWindow):
                 target=lambda: self._server.serve_forever()
             )
             self._server_thread.start()
+            self.ui.lbl_server_status.setText(
+                'Online at <a href="{0}">{0}</a>'.format(
+                    "http://{host}:{port}".format(
+                        host=get_local_hostname(),
+                        port=port
+                    )
+                )
+            )
             
     def stop_server(self):
         if self._server is not None:
@@ -117,6 +144,7 @@ class MainWindow(QtGui.QMainWindow):
             self._server_thread.join()
             self._server = None
             self._server_thread = None
+            self.ui.lbl_server_status.setText("Offline")
         
     ## EVENTS ##################################################################
         
