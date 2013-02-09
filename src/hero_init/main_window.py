@@ -206,7 +206,7 @@ class MainCommand(cmd.Cmd):
     
     @shlexify
     def do_add(self, name, spd, dex, stun, body, end, kind="PC", status=""):
-        self._model.add_combatant(Combatant(name, spd, dex, stun, body, end, kind, status))
+        self._model.add_combatant(Combatant(name, spd, dex, stun, body, end, kind=kind, status=status))
         
     @shlexify
     def do_run(self, filename):

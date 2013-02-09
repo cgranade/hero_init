@@ -25,12 +25,40 @@
 ## IMPORTS #####################################################################
 
 import os
+import json
 import mimetypes
 import SimpleHTTPServer
 
 from combat_model import *
 
 ## CLASSES #####################################################################
+
+class HeroEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Combatant):
+            return {
+                'name': obj.name,
+                'spd':  obj.spd,
+                'dex':  obj.dex,
+                'stun': obj.stun,
+                'body': obj.body,
+                'end':  obj.end,
+                'seg': [
+                    States.reverse_mapping[seg].lower()
+                    for seg in obj._segment
+                ], # TODO: use reverse_mapping on segments.
+                'status': obj.status,
+                'kind': obj.kind,
+            }
+            
+        elif isinstance(obj, Characteristic):
+            return {
+                'cur': obj.cur,
+                'max': obj.max
+            }
+            
+        else:
+            return super(HeroEncoder, self).default(obj)    
 
 def make_http_handler(model):
     # This way, the request handler will close over the value of model.
@@ -74,8 +102,36 @@ def make_http_handler(model):
                 
             
             elif self.path.startswith("/api"):
-                # TODO: handle API calls.
-                pass
+                json_resp = None
+                
+                api_path = self.path.partition("/api")[2]
+                if api_path.startswith("/pcs"):
+                    pc_path = api_path.partition("/pcs")[2]
+                    if len(pc_path) == 0:
+                        # List all PCs.
+                        # FIXME: shouldn't use _combatants, as it's kind of
+                        #        private.
+                        json_resp = [
+                            combatant
+                            for combatant in model._combatants
+                            if combatant.kind == "PC"
+                        ]
+                    else:
+                        pc_name = pc_path.partition("/")[2]
+                        try:
+                            json_resp = iter(
+                                combatant
+                                for combatant in model._combatants
+                                if combatant.kind == "PC"
+                                and combatant.name == pc_name
+                            ).next()
+                        except StopIteration:
+                            json_resp = None
+                        
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps(json_resp, cls=HeroEncoder))
                 
             else:
                 self.send_response(404)

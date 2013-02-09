@@ -24,6 +24,7 @@
 
 ## IMPORTS #####################################################################
 
+from _lib import enum
 import sys
 import contextlib
 from PySide import QtCore, QtGui
@@ -34,14 +35,11 @@ COMBATANT_KINDS = [
     "PC", "NPC"
 ]
 
-STATES = {
-    "NONE":   0,
-    "FUTURE": 1,
-    "NOW":    2,
-    "ABORT":  3,
-    "PAST":  -1,
-}
+States = enum.enum(
+    "NONE",  "PAST", "ABORT", "NOW", "FUTURE"
+)
 
+# Declare a more readable speed chart.
 SPEED_CHART = (
     (0, ) * 12,
     # 1   2   3   4   5   6   7   8   9  10  11  12
@@ -59,6 +57,15 @@ SPEED_CHART = (
     ( 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1), # 12
 )
 
+# ...then convert it to something more usable.
+SPEED_CHART = tuple(
+    tuple(
+        States.NONE if segment == 0 else States.FUTURE
+        for segment in speed
+    )
+    for speed in SPEED_CHART
+)
+
 class Characteristic(object):
     def __init__(self, current, maxval=None):
         if isinstance(current, str):
@@ -69,6 +76,20 @@ class Characteristic(object):
             
         self._cur = current
         self._max = maxval if maxval is not None else current
+        
+    @property
+    def cur(self):
+        return self._cur
+    @cur.setter
+    def cur(self, newval):
+        self._cur = int(newval)
+        
+    @property
+    def max(self):
+        return self._max
+    @max.setter
+    def max(self, newval):
+        self._max = int(newval)
         
     def __str__(self):
         return "{cur}/{max}".format(cur=self._cur, max=self._max)
@@ -111,6 +132,12 @@ class Combatant(object):
     @property
     def status(self):
         return self._status
+    @status.setter
+    def status(self, newval):
+        self._status = str(newval)
+    @property
+    def kind(self):
+        return self._kind
         
     def __getitem__(self, idx):
         assert idx <= 12 and idx >= 1, idx
@@ -134,9 +161,9 @@ class Combatant(object):
         # that come before we find a FUTURE in the old speed chart.
         for idx, old in enumerate(self._segment):
             # Check see if the old SPD chart gives us this segment.
-            if old != STATES["FUTURE"]:
+            if old != States.FUTURE:
                 # Nope. Erase the state in the newseg, then.
-                newseg[idx] = STATES["NONE"]
+                newseg[idx] = States.NONE
             else:
                 # Yep. We're done here.
                 break
@@ -265,14 +292,14 @@ class SpeedChartModel(QtCore.QAbstractTableModel):
     
         # Remove the current combatant's turn.
         if self._current_combatant is not None:
-            self._current_combatant[self.segment] = STATES["PAST"]
+            self._current_combatant[self.segment] = States.PAST
             
         # Find the next combatant.
         # This will be the highest DEX combatant with a turn in the FUTURE
         # of this segment.
         # If we don't find a segment, we increment.
         while True:
-            cmbs_this_seg = [cmb for cmb in self._combatants if cmb[self.segment] == STATES["FUTURE"]]
+            cmbs_this_seg = [cmb for cmb in self._combatants if cmb[self.segment] == States.FUTURE]
             if cmbs_this_seg:
                 # We found something, so break!
                 break
@@ -282,7 +309,7 @@ class SpeedChartModel(QtCore.QAbstractTableModel):
         best_dex = max([cmb.dex for cmb in cmbs_this_seg])
         # FIXME: the following ignores ties!
         next_cmb = iter(cmb for cmb in cmbs_this_seg if cmb.dex == best_dex).next()
-        next_cmb[self.segment] = STATES["NOW"]
+        next_cmb[self.segment] = States.NOW
         self._current_combatant = next_cmb
         
         # Notify that the data has changed.
