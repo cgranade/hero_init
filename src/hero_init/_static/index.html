@@ -50,15 +50,93 @@
         <div class="navbar-inner">
             <a class="brand" href="#">hero_init</a>
             <ul class="nav">
-                <li class="active"><a href="#">PC Selection</a></li>
+                <li id="nav-pc-select" class="active"><a href="#">PC Selection</a></li>
+                <li id="nav-current-pc" style="display: none"><a href="#">char_name</a></li>
             </ul>
         </div>
     </div>
     
-    <ul class="nav nav-list">
+    <ul class="nav nav-list" id="pc-list">
       <li class="nav-header">Playable Characters</li>
-      <li><a href="#">PC 1</a></li>
     </ul>
+    
+    <div id="pc-details">
+        <div class="row">
+            <div class="span12">
+                <h3>SPD Chart</h3>
+                <div class="well">
+                    <table class="table">
+                        <tr>
+                            <th> 1</th>
+                            <th> 2</th>
+                            <th> 3</th>
+                            <th> 4</th>
+                            <th> 5</th>
+                            <th> 6</th>
+                            <th> 7</th>
+                            <th> 8</th>
+                            <th> 9</th>
+                            <th>10</th>
+                            <th>11</th>
+                            <th>12</th>
+                        </tr>
+                        <tr>
+                            <td id="seg-1"></td>
+                            <td id="seg-2"></td>
+                            <td id="seg-3"></td>
+                            <td id="seg-4"></td>
+                            <td id="seg-5"></td>
+                            <td id="seg-6"></td>
+                            <td id="seg-7"></td>
+                            <td id="seg-8"></td>
+                            <td id="seg-9"></td>
+                            <td id="seg-10"></td>
+                            <td id="seg-11"></td>
+                            <td id="seg-12"></td>
+                        </tr>
+                    </table>
+                </div> <!-- /well -->
+            </div> <!-- /span12 -->
+        </div> <!-- /row -->
+        <div class="row">
+            <div class="span12">
+            <h3>Charateristics</h3>
+        </div>
+        <div class="row">
+            <div class="span6">
+                <div class="well">
+                    <table class="table">
+                        <tr>
+                            <td>SPD</td>
+                            <td id="curpc-spd"></td>
+                        </tr>
+                        <tr>
+                            <td>DEX</td>
+                            <td id="curpc-dex"></td>
+                        </tr>
+                    </table>
+                </div> <!-- /well -->
+            </div> <!-- /span6 -->
+            <div class="span6">
+                <div class="well">
+                    <table class="table">
+                        <tr>
+                            <td>BODY</td>
+                            <td id="curpc-body"></td>
+                        </tr>
+                        <tr>
+                            <td>STUN</td>
+                            <td id="curpc-stun"></td>
+                        </tr>
+                        <tr>
+                            <td>END</td>
+                            <td id="curpc-end"></td>
+                        </tr>
+                    </table>
+                </div> <!-- /well -->
+            </div> <!-- /span6 -->
+        </div>
+    </div> <!-- /details -->
     
     <!-- Le javascript
     ================================================== -->
@@ -66,6 +144,103 @@
     <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
     <script src="http://code.jquery.com/jquery-migrate-1.1.0.min.js"></script>
     <script src="static/bootstrap/js/bootstrap.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/coffee-script/1.4.0/coffee-script.min.js"></script>
+    
+    <script type="text/coffeescript">
+        ## CONSTANTS ##
+        # TODO: dynamically set api_root from server-side.
+        api_root = "/api/"
+        seg_state_names = { # TODO: replace with icons.
+            none: "",
+            future: "F",
+            past: "P",
+            abort: "A",
+            now: "N"
+        }
+        
+        ## CURRENT STATE ##
+        current_pc = null
+        
+        ## API HANDLING ##
+        
+        api_call = (endpoint, done) ->
+            $.ajax({
+                url: api_root + endpoint
+            }).done(done)
+            
+        ## DOM MANIPULATION ##
+            
+        pc_list_item = (name) ->
+            li = document.createElement("li")
+            a  = $(document.createElement("a"))
+            a.attr('href', "#").click(pc_click(name)).text(name)
+            $(li).append(a)
+            li
+            
+        populate_pc_list =  ->
+            api_call('pcs', (data) ->
+                for pc in data
+                    $('#pc-list').append(pc_list_item(pc.name))
+            )
+        
+        refresh_pc_data = (name) ->
+            # TODO: check that the right PC tab is there.
+            $('#nav-current-pc > a').text(name)
+            api_call("pcs/#{name}", (data) ->
+                for seg in [1..12]
+                    $('#seg-' + seg).text(seg_state_names[data.seg[seg - 1]])
+                
+                # Set SPD and DEX indicators.
+                $('#curpc-spd').text(data.spd)
+                $('#curpc-dex').text(data.dex)
+                
+                # Set BODY, STUN and END.
+                $('#curpc-body').text(characteristic_str(data.body))
+                $('#curpc-stun').text(characteristic_str(data.stun))
+                $('#curpc-end').text(characteristic_str(data.end))
+            )
+            
+        show_pc_selection = ->
+            $('#pc-list').show()
+            $('#pc-details').hide()
+            
+            # Set the navbar.
+            $('#nav-current-pc').removeClass('active')
+            $('#nav-pc-select').addClass('active')
+            
+        show_pc_details = ->
+            # Show the right content div.
+            $('#pc-list').hide()
+            $('#pc-details').show()
+            
+            # Set the navbar.
+            $('#nav-current-pc').show().addClass('active')
+            $('#nav-pc-select').removeClass('active')
+            
+        ## MISC FUNCTIONS ##
+        
+        characteristic_str = (ch) ->
+            "#{ch.cur} / #{ch.max}"
+            
+        ## EVENTS ##
+            
+        pc_click = (name) ->
+            (event) ->
+                current_pc = name
+                refresh_pc_data(name)
+                show_pc_details()
+                # TODO: set timeout to refresh PC data.
+            
+            
+        # Set a new ready() handler to populate the list of PCs.
+        $(document).ready ->
+            populate_pc_list()
+            #seg_spans = ($('seg-' + n) for n in [1..12])
+        
+        # Make the navbar tabs do something.
+        $('#nav-pc-select > a').click(show_pc_selection)
+        $('#nav-current-pc > a').click(show_pc_details)
+    </script>
 
   </body>
 </html>

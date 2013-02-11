@@ -27,6 +27,7 @@
 import os
 import json
 import mimetypes
+import urllib2
 import SimpleHTTPServer
 
 from combat_model import *
@@ -104,7 +105,7 @@ def make_http_handler(model):
             elif self.path.startswith("/api"):
                 json_resp = None
                 
-                api_path = self.path.partition("/api")[2]
+                api_path = urllib2.unquote(self.path).partition("/api")[2]
                 if api_path.startswith("/pcs"):
                     pc_path = api_path.partition("/pcs")[2]
                     if len(pc_path) == 0:
@@ -118,6 +119,7 @@ def make_http_handler(model):
                         ]
                     else:
                         pc_name = pc_path.partition("/")[2]
+                        print(pc_name)
                         try:
                             json_resp = iter(
                                 combatant
