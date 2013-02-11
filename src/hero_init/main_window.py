@@ -222,6 +222,7 @@ class MainCommand(cmd.Cmd):
         "del": "del <name> - Removes combatant.",
         "n": "n - Alias for 'next'.",
         "next": "next - Advances turn order.",
+        "abort": "abort <name> - Aborts the next phase for a given combatant.",
         "d": "d <name> [S | B| E] <amount> - Alias for 'd'.",
         "dmg": "dmg <name> [S | B| E] <amount> - Applies damage.",
         "h": "h <name> [S | B| E] <amount> - Alias for 'h'.",
@@ -287,6 +288,13 @@ class MainCommand(cmd.Cmd):
     def do_next(self):
         self._model.next()
     do_n = do_next
+    
+    @shlexify
+    def do_abort(self, name):
+        try:
+            self._model.abort_phase(name)
+        except RuntimeError as ex:
+            self._window.disp_error(str(ex))
         
     @shlexify
     def do_chspd(self, name, new_spd):

@@ -329,6 +329,36 @@ class SpeedChartModel(QtCore.QAbstractTableModel):
         # We didn't find anything, so return None.
         return None
                 
+    def abort_phase(self, key):
+        # TODO: specialize exceptions.
+        # Check for two conditions:
+        #     1) That the character hasn't already acted this segment.
+        #     2) That the character has a phase this turn.
+        
+        # First, find the combatant, then check.
+        cmb = self.get_combatant(key)
+        if cmb is None:
+            raise RuntimeError("No such combatant.")
+        
+        # (1): Has the character acted?
+        if cmb[self.segment] == States.PAST:
+            raise RuntimeError("That combatant has already acted this segment.")
+            
+        # (1a): If it is the character's current turn, we move forward
+        #       instead of aborting.
+        if cmb[self.segment] == States.NOW:
+            self.next()
+            return
+            
+        # (2): Does the character has a phase?
+        if States.FUTURE not in cmb._segment:
+            raise RuntimeError("That combatant has no phases left this turn.")
+            
+        # OK! Now let them abort.
+        idx_seg = iter(idx + 1 for idx, seg in enumerate(cmb._segment) if seg == States.FUTURE).next()
+        with self.modify_combatant(key):
+            cmb[idx_seg] = States.ABORT
+            
     @contextlib.contextmanager
     def modify_combatant(self, key):
         self.beginResetModel() # ← I really shouldn't do this.
@@ -344,10 +374,11 @@ class SpeedChartModel(QtCore.QAbstractTableModel):
             
         # Find the next combatant.
         # This will be the highest DEX combatant with a turn in the FUTURE
-        # of this segment.
+        # of this segment, or that has ABORTed. In the latter case, we'll
+        # whip right by them, setting the ABORT to a PAST as we go.
         # If we don't find a segment, we increment.
         while True:
-            cmbs_this_seg = [cmb for cmb in self._combatants if cmb[self.segment] == States.FUTURE]
+            cmbs_this_seg = [cmb for cmb in self._combatants if cmb[self.segment] in (States.FUTURE, States.ABORT)]
             if cmbs_this_seg:
                 # We found something, so break!
                 break
@@ -357,8 +388,13 @@ class SpeedChartModel(QtCore.QAbstractTableModel):
         best_dex = max([cmb.dex for cmb in cmbs_this_seg])
         # FIXME: the following ignores ties!
         next_cmb = iter(cmb for cmb in cmbs_this_seg if cmb.dex == best_dex).next()
-        next_cmb[self.segment] = States.NOW
         self._current_combatant = next_cmb
+        if next_cmb[self.segment] == States.ABORT:
+            # As promised, we whip right by ABORTed phases.
+            self.next()
+        else:
+            # If we didn't pass by the character, then they move to NOW.
+            next_cmb[self.segment] = States.NOW
         
         # Notify that the data has changed.
         self.endResetModel()
