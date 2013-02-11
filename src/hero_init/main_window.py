@@ -313,10 +313,13 @@ class MainCommand(cmd.Cmd):
    
 ## MAIN ########################################################################
    
-if __name__ == "__main__":
+def main():
     app = QtGui.QApplication(sys.argv)
     main_win = MainWindow()
     app.lastWindowClosed.connect(main_win.stop_server)
     main_win.show()
     sys.exit(app.exec_())
+    
+if __name__ == "__main__":
+    main()
 
