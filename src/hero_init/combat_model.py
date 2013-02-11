@@ -39,6 +39,14 @@ States = enum.enum(
     "NONE",  "PAST", "ABORT", "NOW", "FUTURE"
 )
 
+STATE_NAMES = {
+    States.NONE: u"",
+    States.PAST: u"×",
+    States.ABORT: u"A",
+    States.NOW: u"!",
+    States.FUTURE: u"•"
+}
+
 # Declare a more readable speed chart.
 SPEED_CHART = (
     (0, ) * 12,
@@ -82,7 +90,8 @@ class Characteristic(object):
         return self._cur
     @cur.setter
     def cur(self, newval):
-        self._cur = int(newval)
+        # Allow for negative cur, but not more than max.
+        self._cur = min(int(newval), self._max)         
         
     @property
     def max(self):
@@ -104,7 +113,9 @@ class Combatant(object):
         self._end = Characteristic(end)
         self._status = status
         self._segment = [None] * 12
-        self._kind = kind        
+        self._kind = kind
+        
+        self._model = None     
         
         self._next_turn()
         
@@ -139,6 +150,18 @@ class Combatant(object):
     def kind(self):
         return self._kind
         
+    @property
+    def is_current(self):
+        """
+        Returns ``True`` if this is the current combatant, ``None`` if there
+        if this combatant is not attached to a combat model and ``False``
+        otherwise.
+        """
+        if self._model is None:
+            return None
+            
+        return self == self._model.current_combatant
+        
     def __getitem__(self, idx):
         assert idx <= 12 and idx >= 1, idx
         return self._segment[idx - 1] # Segments are 1-based!
@@ -172,6 +195,16 @@ class Combatant(object):
         # segments. Either way, newseg should be accurate.
         self._segment = newseg
 
+class SpeedChartProxyModel(QtGui.QSortFilterProxyModel):
+    def lessThan(self, left, right):
+        left_cmb = self.sourceModel()._combatants[left.row()]
+        right_cmb = self.sourceModel()._combatants[right.row()]
+        
+        if left_cmb.spd != right_cmb.spd:
+            return left_cmb.spd < right_cmb.spd
+        else:
+            return left_cmb.dex < right_cmb.dex
+
 class SpeedChartModel(QtCore.QAbstractTableModel):
     
     FORMATTERS = [
@@ -180,7 +213,7 @@ class SpeedChartModel(QtCore.QAbstractTableModel):
         lambda C: C.dex,
     ] + [
         # Trick to "capture" generator index.
-        (lambda seg: (lambda C: C[seg]))(segment)
+        (lambda seg: (lambda C: STATE_NAMES[C[seg]]))(segment)
         for segment in xrange(1, 13)
     ] + [
         lambda C: str(C.stun),
@@ -265,21 +298,36 @@ class SpeedChartModel(QtCore.QAbstractTableModel):
     ## PUBLIC METHODS ##########################################################
     
     def add_combatant(self, combatant):
+        # Attach the current combatant to this model.
+        combatant._model = self
+        
         # FIXME: doesn't check for duplicates!
         self.beginResetModel()
         self._combatants.append(combatant)
         self.endResetModel()
         
     def del_combatant(self, name):
+        self.get_combatant(name)._model = None
+        
         self.beginResetModel()
         self._combatants.remove(self.get_combatant(name))
         self.endResetModel()
     
     def get_combatant(self, key):
         # FIXME: slow as fuck.
+        # Start by looking for an exact match.
         for combatant in self._combatants:
             if combatant.name == key:
                 return combatant
+                
+        # If none was found, count how many start with the key.
+        # If that's exactly one, return it.
+        matches = [c for c in self._combatants if c.name.startswith(key)]
+        if len(matches) == 1:
+            return matches[0]
+            
+        # We didn't find anything, so return None.
+        return None
                 
     @contextlib.contextmanager
     def modify_combatant(self, key):

@@ -47,6 +47,7 @@ def shlexify(func):
         tail = args[-1]
         return func(*(head + tuple(shlex.split(tail))))
     
+    shlexed_func._undec = func
     return shlexed_func
 
 ## FUNCTIONS ###################################################################
@@ -80,9 +81,34 @@ class MainWindow(QtGui.QMainWindow):
         
         # Setup table model.
         self.spd_model = SpeedChartModel()
-        self.ui.tbl_spd_chart.setModel(self.spd_model)
-        self.ui.tbl_spd_chart.horizontalHeader().setResizeMode(QtGui.QHeaderView.Stretch)
+        self.proxy_model = SpeedChartProxyModel(self)
+        self.proxy_model.setSourceModel(self.spd_model)
+        self.proxy_model.sort(0, QtCore.Qt.DescendingOrder)
+        self.ui.tbl_spd_chart.setModel(self.proxy_model)
         
+        # Set resize modes for the table view.
+        # Name
+        self.ui.tbl_spd_chart.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.Stretch)
+        # SPD
+        self.ui.tbl_spd_chart.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Fixed)
+        self.ui.tbl_spd_chart.horizontalHeader().resizeSection(1, 45)
+        # DEX
+        self.ui.tbl_spd_chart.horizontalHeader().setResizeMode(2, QtGui.QHeaderView.Fixed)
+        self.ui.tbl_spd_chart.horizontalHeader().resizeSection(2, 45)
+        for idx_header in xrange(3, 15):
+            self.ui.tbl_spd_chart.horizontalHeader().setResizeMode(idx_header, QtGui.QHeaderView.Fixed)
+            self.ui.tbl_spd_chart.horizontalHeader().resizeSection(idx_header, 25)
+        # STUN
+        self.ui.tbl_spd_chart.horizontalHeader().setResizeMode(15, QtGui.QHeaderView.Fixed)
+        self.ui.tbl_spd_chart.horizontalHeader().resizeSection(15, 60)
+        # BODY
+        self.ui.tbl_spd_chart.horizontalHeader().setResizeMode(16, QtGui.QHeaderView.Fixed)
+        self.ui.tbl_spd_chart.horizontalHeader().resizeSection(16, 60)
+        # END
+        self.ui.tbl_spd_chart.horizontalHeader().setResizeMode(17, QtGui.QHeaderView.Fixed)
+        self.ui.tbl_spd_chart.horizontalHeader().resizeSection(17, 60)
+        # Status
+        self.ui.tbl_spd_chart.horizontalHeader().setResizeMode(18, QtGui.QHeaderView.Stretch)
         # Connect signals and slots.
         self.ui.le_cmd.returnPressed.connect(self.on_cmd_go)
         self.ui.le_cmd.textChanged.connect(self.on_cmd_edit)
@@ -119,24 +145,30 @@ class MainWindow(QtGui.QMainWindow):
         
     ## METHODS #################################################################
     
+    def disp_error(self, err_str):
+        self.ui.lbl_cmd_hints.setText('<b>{}</b>'.format(err_str))
+    
     def start_server(self, ip='', port=8080):
         if self._server is None:
             print "Starting server on port {}.".format(port)
-            self._server = SocketServer.ThreadingTCPServer(
-                (ip, port), make_http_handler(self.spd_model)
-            )
-            self._server_thread = threading.Thread(
-                target=lambda: self._server.serve_forever()
-            )
-            self._server_thread.start()
-            self.ui.lbl_server_status.setText(
-                'Online at <a href="{0}">{0}</a>'.format(
-                    "http://{host}:{port}".format(
-                        host=get_local_hostname(),
-                        port=port
+            try:
+                self._server = SocketServer.ThreadingTCPServer(
+                    (ip, port), make_http_handler(self.spd_model)
+                )
+                self._server_thread = threading.Thread(
+                    target=lambda: self._server.serve_forever()
+                )
+                self._server_thread.start()
+                self.ui.lbl_server_status.setText(
+                    'Online at <a href="{0}">{0}</a>'.format(
+                        "http://{host}:{port}".format(
+                            host=get_local_hostname(),
+                            port=port
+                        )
                     )
                 )
-            )
+            except Exception as ex:
+                self.disp_error(str(ex))
             
     def stop_server(self):
         if self._server is not None:
@@ -186,12 +218,18 @@ class MainCommand(cmd.Cmd):
     
     # TODO: populate from methods.
     USAGES = {
-        "add": "add <name> <spd> <dex> <stun> <body> <end> [PC | NPC] [<status>]",
-        "del": "del <name>",
-        "next": "next",
-        "run": "run <file>",
-        "chspd": "chspd <name> <new_spd>",
-        "server": "server [start | stop] [<port>]"
+        "add": "add <name> <spd> <dex> <stun> <body> <end> [PC | NPC] [<status>] - Adds new combatant.",
+        "del": "del <name> - Removes combatant.",
+        "n": "n - Alias for 'next'.",
+        "next": "next - Advances turn order.",
+        "d": "d <name> [S | B| E] <amount> - Alias for 'd'.",
+        "dmg": "dmg <name> [S | B| E] <amount> - Applies damage.",
+        "h": "h <name> [S | B| E] <amount> - Alias for 'h'.",
+        "heal": "heal <name> [S | B| E] <amount> - Heals damage.",
+        "stat": "stat <name> <new_status> - Changes status string.",
+        "chspd": "chspd <name> <new_spd> - Changes SPD of one combatant.",
+        "run": "run <file> - Runs a hero_init script.",
+        "server": "server [start | stop] [<port>] - Starts or stops the embedded webserver."
     }
     VALID_CMDS = USAGES.keys() # TODO: refer to Cmd class
     
@@ -220,8 +258,35 @@ class MainCommand(cmd.Cmd):
         self._model.del_combatant(name)
                     
     @shlexify
+    def do_dmg(self, name, char, amt):
+        ABBREVS = {"S": "stun", "B": "body", "E": "end"}
+        amt = int(amt)
+        char = char.upper()
+        if char not in "SBE":
+            self._window.disp_error("Characteristic abbreviation {} not recognized.".format(char))
+            return
+            
+        with self._model.modify_combatant(name) as cmb:
+            getattr(cmb, ABBREVS[char]).cur -= amt
+        
+    do_d = do_dmg
+    
+    @shlexify
+    def do_heal(self, name, char, amt):
+        # Dirty hack to bypass shlexification.
+        self.do_dmg._undec(self, name, char, -int(amt))
+        
+    do_h = do_heal
+                    
+    @shlexify
+    def do_stat(self, name, stat):
+        with self._model.modify_combatant(name) as cmb:
+            cmb.status = stat
+                    
+    @shlexify
     def do_next(self):
         self._model.next()
+    do_n = do_next
         
     @shlexify
     def do_chspd(self, name, new_spd):

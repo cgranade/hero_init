@@ -64,7 +64,7 @@
         <div class="row">
             <div class="span12">
                 <h3>SPD Chart</h3>
-                <div class="well">
+                <div id="spd-well" class="well">
                     <table class="table">
                         <tr>
                             <th> 1</th>
@@ -152,10 +152,10 @@
         api_root = "/api/"
         seg_state_names = { # TODO: replace with icons.
             none: "",
-            future: "F",
-            past: "P",
+            future: "•",
+            past: "×",
             abort: "A",
-            now: "N"
+            now: "<strong>!</strong>"
         }
         
         ## CURRENT STATE ##
@@ -187,8 +187,13 @@
             # TODO: check that the right PC tab is there.
             $('#nav-current-pc > a').text(name)
             api_call("pcs/#{name}", (data) ->
+                console.log(data.current)
+                if data.current
+                    $("#spd-well").attr('class', "alert alert-info")
+                else
+                    $("#spd-well").attr('class', "well")
                 for seg in [1..12]
-                    $('#seg-' + seg).text(seg_state_names[data.seg[seg - 1]])
+                    $('#seg-' + seg).html(seg_state_names[data.seg[seg - 1]])
                 
                 # Set SPD and DEX indicators.
                 $('#curpc-spd').text(data.spd)
@@ -229,7 +234,9 @@
                 current_pc = name
                 refresh_pc_data(name)
                 show_pc_details()
-                # TODO: set timeout to refresh PC data.
+                setInterval( ( ->
+                    refresh_pc_data(name)),
+                500)
             
             
         # Set a new ready() handler to populate the list of PCs.

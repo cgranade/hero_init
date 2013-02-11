@@ -50,6 +50,7 @@ class HeroEncoder(json.JSONEncoder):
                 ], # TODO: use reverse_mapping on segments.
                 'status': obj.status,
                 'kind': obj.kind,
+                'current': obj.is_current
             }
             
         elif isinstance(obj, Characteristic):
