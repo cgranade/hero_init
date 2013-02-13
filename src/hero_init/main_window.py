@@ -30,13 +30,13 @@ import SocketServer
 import threading
 from PySide import QtCore, QtGui
 
-import ui.main_window
+import hero_init.ui.main_window
 
 import shlex, cmd, contextlib
 from functools import wraps
 
-from combat_model import *
-from http_handler import *
+from hero_init.combat_model import *
+from hero_init.http_handler import *
 
 ## DECORATORS ##################################################################
 
@@ -76,7 +76,7 @@ class MainWindow(QtGui.QMainWindow):
     
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
-        self.ui =  ui.main_window.Ui_MainWindow()
+        self.ui = hero_init.ui.main_window.Ui_MainWindow()
         self.ui.setupUi(self)
         
         # Setup table model.

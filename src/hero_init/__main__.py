@@ -22,5 +22,5 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
-from main_window import main
+from hero_init.main_window import main
 main()
