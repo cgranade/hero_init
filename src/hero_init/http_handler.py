@@ -66,22 +66,17 @@ class HeroEncoder(json.JSONEncoder):
 
 # Load resources from hero_init._static.
 this_dir, this_fname = os.path.split(__file__)
-if this_dir.endswith(".zip"):
-    # We've been frozen, so handle things differently!
-    our_zip = zipfile.ZipFile(this_dir, 'r')
-    
-    @contextmanager
-    def open_resource(respath):
-        with our_zip.open("hero_init/_static/" + respath) as f:
-            yield f
-            
+if 'hero_init.app' in this_dir:
+    dir_parts = this_dir.partition('hero_init.app')
+    static_dir = dir_parts[0] + dir_parts[1] + \
+        '/Contents/Resources/hero_init/_static'
 else:
     static_dir = os.path.join(this_dir, "_static")
 
-    @contextmanager
-    def open_resource(respath):
-        with open(os.path.join(static_dir, respath), 'r') as f:
-            yield f
+@contextmanager
+def open_resource(respath):
+    with open(os.path.join(static_dir, respath), 'r') as f:
+        yield f
 
 def make_http_handler(model):
     # This way, the request handler will close over the value of model.
