@@ -72,7 +72,7 @@ if this_dir.endswith(".zip"):
     
     @contextmanager
     def open_resource(respath):
-        with our_zip.open("hero_init/_static/" + res_path) as f:
+        with our_zip.open("hero_init/_static/" + respath) as f:
             yield f
             
 else:
