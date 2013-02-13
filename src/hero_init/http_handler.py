@@ -30,7 +30,7 @@ import mimetypes
 import urllib2
 import SimpleHTTPServer
 
-from hero_init.combat_model import *
+from combat_model import *
 
 ## CLASSES #####################################################################
 
