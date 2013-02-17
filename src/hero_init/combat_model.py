@@ -200,10 +200,10 @@ class SpeedChartProxyModel(QtGui.QSortFilterProxyModel):
         left_cmb = self.sourceModel()._combatants[left.row()]
         right_cmb = self.sourceModel()._combatants[right.row()]
         
-        if left_cmb.spd != right_cmb.spd:
-            return left_cmb.spd < right_cmb.spd
-        else:
+        if left_cmb.dex != right_cmb.dex:
             return left_cmb.dex < right_cmb.dex
+        else:
+            return left_cmb.spd < right_cmb.spd
 
 class SpeedChartModel(QtCore.QAbstractTableModel):
     
@@ -399,3 +399,16 @@ class SpeedChartModel(QtCore.QAbstractTableModel):
         # Notify that the data has changed.
         self.endResetModel()
 
+    def skip_to(self, seg):
+        if seg > 12 or seg < 1:
+            raise ValueError("Invalid segment.")
+            
+        # Erase the past from the new segment.
+        self._segment = seg
+        for cmb in self._combatants:
+            for idx_past_seg in xrange(1, seg):
+                if cmb[idx_past_seg] != States.NONE:
+                    cmb[idx_past_seg] = States.PAST
+        
+        # Now find who goes next.
+        self.next()

@@ -227,12 +227,13 @@ class MainCommand(cmd.Cmd):
         "dmg": "dmg <name> [S | B| E] <amount> - Applies damage.",
         "h": "h <name> [S | B| E] <amount> - Alias for 'h'.",
         "heal": "heal <name> [S | B| E] <amount> - Heals damage.",
-        "stat": "stat <name> <new_status> - Changes status string.",
+        "stat": "stat <name> [<new_status>] - Changes or clears status string.",
         "chspd": "chspd <name> <new_spd> - Changes SPD of one combatant.",
         "run": "run <file> - Runs a hero_init script.",
+        "skipto": "skipto <seg> - Skips turns until a given segment is reached.",
         "server": "server [start | stop] [<port>] - Starts or stops the embedded webserver."
     }
-    VALID_CMDS = USAGES.keys() # TODO: refer to Cmd class
+    VALID_CMDS = sorted(USAGES.keys()) # TODO: refer to Cmd class
     
     ## CONSTRUCTOR #############################################################
     
@@ -280,7 +281,8 @@ class MainCommand(cmd.Cmd):
     do_h = do_heal
                     
     @shlexify
-    def do_stat(self, name, stat):
+    def do_stat(self, name, *args):
+        stat = "" if len(args) == 0 else " ".join(args)
         with self._model.modify_combatant(name) as cmb:
             cmb.status = stat
                     
@@ -288,6 +290,11 @@ class MainCommand(cmd.Cmd):
     def do_next(self):
         self._model.next()
     do_n = do_next
+    
+    @shlexify
+    def do_skipto(self, seg):
+        seg = int(seg)
+        self._model.skip_to(seg)
     
     @shlexify
     def do_abort(self, name):
