@@ -50,7 +50,12 @@ Linux
 Mac OS X
 --------
 
-TODO
+*Note*: These instructions are untested.
+
+On Mac OS X, you can run **hero_init** either from the Terminal, following the Linux
+instructions above, or you can try out the `experimental DMG installer`_.
+
+.. _`experimental DMG installer`: https://www.dropbox.com/s/2edwpyj02cq74t1/hero_init.dmg
 
 Windows
 -------

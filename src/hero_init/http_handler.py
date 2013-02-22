@@ -29,6 +29,8 @@ import json
 import mimetypes
 import urllib2
 import SimpleHTTPServer
+import zipfile
+from contextlib import contextmanager
 
 from combat_model import *
 
@@ -62,15 +64,25 @@ class HeroEncoder(json.JSONEncoder):
         else:
             return super(HeroEncoder, self).default(obj)    
 
+# Load resources from hero_init._static.
+this_dir, this_fname = os.path.split(__file__)
+if 'hero_init.app' in this_dir:
+    dir_parts = this_dir.partition('hero_init.app')
+    static_dir = dir_parts[0] + dir_parts[1] + \
+        '/Contents/Resources/hero_init/_static'
+else:
+    static_dir = os.path.join(this_dir, "_static")
+
+@contextmanager
+def open_resource(respath):
+    with open(os.path.join(static_dir, respath), 'r') as f:
+        yield f
+
 def make_http_handler(model):
     # This way, the request handler will close over the value of model.
     # We also want to close over some common resources.
-
-    # Load resources from hero_init._static.
-    this_dir, this_fname = os.path.split(__file__)
-    static_dir = os.path.join(this_dir, "_static")
     
-    with open(os.path.join(static_dir, "index.html")) as f:
+    with open_resource("index.html") as f:
         index = ""
         for line in f:
             index += line
@@ -88,17 +100,14 @@ def make_http_handler(model):
                 self.wfile.write(index)
                 
             elif self.path.startswith("/static/"):
-                res_path = os.path.join(
-                    static_dir,
-                    self.path.partition("/static/")[2]
-                )
+                res_path = self.path.partition("/static/")[2]
                 mime = mimetypes.guess_type(res_path)[0]
                 print "static_dir == " + static_dir
                 print "Loading {}, type={}".format(res_path, mime)
                 self.send_response(200)
                 self.send_header('Content-type', mime)
                 self.end_headers()
-                with open(res_path, 'r') as f:
+                with open_resource(res_path) as f:
                     for line in f:
                         self.wfile.write(line)
                 

@@ -8,7 +8,7 @@ Usage:
 from setuptools import setup
 
 APP = ['src/hero_init/__main__.py']
-DATA_FILES = []
+DATA_FILES = ['src/hero_init']
 OPTIONS = {'argv_emulation': True}
 
 setup(
