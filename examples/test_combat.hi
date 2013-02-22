@@ -1,0 +1,12 @@
+# Add Player Characters by using the "PC" argument.
+add Alice 5 19 20/40 10/20 35 PC "exhausted"
+add Bob 4 22 40 15 40 PC
+
+# Next, add NPCs.
+add Eve 6 25 40 30 30 NPC
+
+# Finally, setup automatic recovery.
+runpost12 examples/recovery.hi
+
+# Once everything is setup, start combat by skipping to 12.
+skipto 12

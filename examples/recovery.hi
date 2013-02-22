@@ -1,0 +1,15 @@
+## PLAYER CHARACTERS ###########################################################
+
+# Alice
+heal Alice S 12
+heal Alice E 12
+
+# Bob
+heal Bob S 10
+heal Bob E 15
+
+## NON-PLAYER CHARACTERS #######################################################
+
+# Eve
+heal "Eve" S 25
+
