@@ -427,4 +427,5 @@ class SpeedChartModel(QtCore.QAbstractTableModel):
                     cmb[idx_past_seg] = States.PAST
         
         # Now find who goes next.
+        self._current_combatant = None
         self.next()
