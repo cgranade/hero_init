@@ -183,13 +183,28 @@ class MainWindow(QtGui.QMainWindow):
     def on_model_change(self, *args):
         self.ui.lbl_now_turn.setText(str(self.spd_model.turn))
         self.ui.lbl_now_seg.setText(str(self.spd_model.segment))
+        
         if self.spd_model.current_combatant is not None:
+            # We have a combatant, so display their info.
             self.ui.lbl_now_name.setText(str(self.spd_model.current_combatant.name))
             self.ui.lbl_now_spd.setText(str(self.spd_model.current_combatant.spd))
             self.ui.lbl_now_dex.setText(str(self.spd_model.current_combatant.dex))
             self.ui.lbl_now_stun.setText(str(self.spd_model.current_combatant.stun))
             self.ui.lbl_now_body.setText(str(self.spd_model.current_combatant.body))
             self.ui.lbl_now_end.setText(str(self.spd_model.current_combatant.end))
+        else:
+            # No combatant; are we in post-12? Check if seg == 0.
+            if self.spd_model.segment == 0:
+                self.ui.lbl_now_name.setText(str("Post-Segment 12"))
+            else:
+                self.ui.lbl_now_name.setText(str("none"))
+            # In either case, clear everything else.
+            self.ui.lbl_now_spd.setText(str(""))
+            self.ui.lbl_now_dex.setText(str(""))
+            self.ui.lbl_now_stun.setText(str(""))
+            self.ui.lbl_now_body.setText(str(""))
+            self.ui.lbl_now_end.setText(str(""))
+            
         
     def on_cmd_edit(self):
         cmd = self.cmd_text

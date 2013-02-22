@@ -289,11 +289,13 @@ class SpeedChartModel(QtCore.QAbstractTableModel):
     def _increment(self):
         turn, seg = self._now
         if seg == 12:
-            self._now = (turn + 1, 1)
+            self._now = (turn + 1, 0)
             for combatant in self._combatants:
                 combatant._next_turn()
+            return True
         else:
             self._now = (turn, seg + 1)
+            return False
         
     ## PUBLIC METHODS ##########################################################
     
@@ -369,7 +371,7 @@ class SpeedChartModel(QtCore.QAbstractTableModel):
         self.beginResetModel() # This is really lazy...
     
         # Remove the current combatant's turn.
-        if self._current_combatant is not None:
+        if self._current_combatant is not None and self.segment is not None:
             self._current_combatant[self.segment] = States.PAST
             
         # Find the next combatant.
@@ -378,12 +380,23 @@ class SpeedChartModel(QtCore.QAbstractTableModel):
         # whip right by them, setting the ABORT to a PAST as we go.
         # If we don't find a segment, we increment.
         while True:
-            cmbs_this_seg = [cmb for cmb in self._combatants if cmb[self.segment] in (States.FUTURE, States.ABORT)]
+            # TODO: move this out into its own method.
+            if self.segment > 0:
+                cmbs_this_seg = [cmb for cmb in self._combatants if cmb[self.segment] in (States.FUTURE, States.ABORT)]
+            else:
+                cmbs_this_seg = False
+                
             if cmbs_this_seg:
                 # We found something, so break!
                 break
             else:
-                self._increment()
+                # _increment returns True if it had to increment to the
+                # next turn. If that happened, we go to the special
+                # "post-12" state, with no current combatant.
+                if self._increment():
+                    self._current_combatant = None
+                    self.endResetModel()
+                    return
             
         best_dex = max([cmb.dex for cmb in cmbs_this_seg])
         # FIXME: the following ignores ties!
@@ -403,8 +416,11 @@ class SpeedChartModel(QtCore.QAbstractTableModel):
         if seg > 12 or seg < 1:
             raise ValueError("Invalid segment.")
             
+        if seg < self.segment:
+            raise ValueError("Cannot skip to the past.")
+            
         # Erase the past from the new segment.
-        self._segment = seg
+        self._now = (self.turn, seg)
         for cmb in self._combatants:
             for idx_past_seg in xrange(1, seg):
                 if cmb[idx_past_seg] != States.NONE:
