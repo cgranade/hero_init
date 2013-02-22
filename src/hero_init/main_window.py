@@ -245,6 +245,7 @@ class MainCommand(cmd.Cmd):
         "stat": "stat <name> [<new_status>] - Changes or clears status string.",
         "chspd": "chspd <name> <new_spd> - Changes SPD of one combatant.",
         "run": "run <file> - Runs a hero_init script.",
+        "runpost12": "runpost12 <file> - Sets a given script to run post-segment 12.",
         "skipto": "skipto <seg> - Skips turns until a given segment is reached.",
         "server": "server [start | stop] [<port>] - Starts or stops the embedded webserver."
     }
@@ -257,11 +258,34 @@ class MainCommand(cmd.Cmd):
         self._model = model
         self._window = window
     
+    ## OTHER METHODS ###########################################################
+    
+    def emptyline(self):
+        # Override to prevent Cmd from repeating commands.
+        pass
+        
+    def default(self, line):
+        self._win.disp_error("No such command {}.".format(line.split(" ")[0]))
+    
     ## COMMANDS ################################################################
+    
+    ## COMBATANT MANAGEMENT COMMANDS ##
     
     @shlexify
     def do_add(self, name, spd, dex, stun, body, end, kind="PC", status=""):
         self._model.add_combatant(Combatant(name, spd, dex, stun, body, end, kind=kind, status=status))
+        
+    @shlexify
+    def do_del(self, name):
+        self._model.del_combatant(name)
+        
+    @shlexify
+    def do_stat(self, name, *args):
+        stat = "" if len(args) == 0 else " ".join(args)
+        with self._model.modify_combatant(name) as cmb:
+            cmb.status = stat
+        
+    ## SCRIPTING COMMANDS ##
         
     @shlexify
     def do_run(self, filename):
@@ -271,8 +295,10 @@ class MainCommand(cmd.Cmd):
                     self.onecmd(line)
                     
     @shlexify
-    def do_del(self, name):
-        self._model.del_combatant(name)
+    def do_runpost12(self, filename):
+        self._model.on_post12 = lambda: self.do_run._undec(self, filename)
+                    
+    ## DAMAGE COMMANDS ##
                     
     @shlexify
     def do_dmg(self, name, char, amt):
@@ -294,12 +320,8 @@ class MainCommand(cmd.Cmd):
         self.do_dmg._undec(self, name, char, -int(amt))
         
     do_h = do_heal
-                    
-    @shlexify
-    def do_stat(self, name, *args):
-        stat = "" if len(args) == 0 else " ".join(args)
-        with self._model.modify_combatant(name) as cmb:
-            cmb.status = stat
+                  
+    ## TIME COMMANDS ##
                     
     @shlexify
     def do_next(self):
@@ -322,6 +344,8 @@ class MainCommand(cmd.Cmd):
     def do_chspd(self, name, new_spd):
         with self._model.modify_combatant(name) as combatant:
             combatant.change_spd(int(new_spd))
+            
+    ## SERVER COMMANDS ##
             
     @shlexify
     def do_server(self, what, port=None):

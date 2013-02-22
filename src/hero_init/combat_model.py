@@ -237,6 +237,8 @@ class SpeedChartModel(QtCore.QAbstractTableModel):
         self._now = (1, 1)
         self._current_combatant = None
         
+        self.on_post12 = None
+        
     ## PROPERTIES ##############################################################
         
     @property
@@ -290,6 +292,12 @@ class SpeedChartModel(QtCore.QAbstractTableModel):
         turn, seg = self._now
         if seg == 12:
             self._now = (turn + 1, 0)
+            if self.on_post12 is not None:
+                try:
+                    self.on_post12()
+                except Exception as ex:
+                    print "Error during post-12 script:"
+                    print ex
             for combatant in self._combatants:
                 combatant._next_turn()
             return True
