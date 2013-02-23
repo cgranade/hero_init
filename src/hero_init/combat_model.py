@@ -178,6 +178,16 @@ class Combatant(object):
         self._spd = newspd
         newseg = list(SPEED_CHART[newspd])
         
+        # As a special case, if the combatant is attached to a model
+        # that is in the post-12 segment, the speed should change
+        # immediately, without consulting the within-Turn rules.
+        if self._model is not None and self._model.segment == 0:
+            self._segment = newseg
+            return
+        
+        # If we're here, then treat the SPD change by using the within-Turn
+        # rules.
+        #
         # Go through the segments in the new and old lists,
         # and don't allow the combatant to move unless both lists have
         # a FUTURE. We can do this by erasing all elements of newseg
